@@ -1,41 +1,63 @@
 import streamlit as st
 import openai
 
-# 1. Setup Page
-st.set_page_config(page_title="The Sourcing Sensei", layout="centered")
-st.title("🎯 The Sourcing Sensei")
-st.subheader("JD Decoder & Recruitment Educator")
+# Page Config
+st.set_page_config(page_title="Sourcing Sensei", page_icon="🎯")
+st.title("🎯 Sourcing Sensei: JD Decoder")
 
-# 2. Sidebar for API Key (Keep it secure!)
-api_key = st.sidebar.text_input("Enter OpenAI API Key", type="password")
+# Sidebar for API Key
+with st.sidebar:
+    st.header("Settings")
+    api_key = st.text_input("Enter OpenAI API Key", type="password")
+    st.info("Your key is used only for this session.")
 
 if api_key:
     openai.api_key = api_key
     
-    # 3. File Upload
-    uploaded_file = st.file_uploader("Upload a Job Description (PDF or Text)", type=["pdf", "txt"])
+    # --- Input Section ---
+    st.markdown("### Step 1: Provide the Job Description")
+    tab1, tab2 = st.tabs(["📄 Upload File", "📝 Paste Text"])
     
-    if uploaded_file:
-        jd_text = uploaded_file.read().decode("utf-8") # Simplified for demo
-        
-        # 4. The Instruction Prompt (The Guardrails)
-        prompt = f"""
-        Analyze the following Job Description:
-        {jd_text}
-        
-        STRICT RULES:
-        1. Breakdown skills into: Primary, Secondary, and Preferable.
-        2. Explain 2-3 technologies to the recruiter as a mentor.
-        3. Provide the LOGIC for Boolean/X-Ray searches (which operators and keywords to use).
-        4. NEVER provide a pre-written search string.
-        """
-        
-        if st.button("Decode JD"):
-            with st.spinner("Analyzing technology..."):
-                response = openai.ChatCompletion.create(
-                    model="gpt-4o", # Or gpt-5-mini in 2026
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                st.markdown(response.choices[0].message.content)
+    jd_content = ""
+
+    with tab1:
+        uploaded_file = st.file_uploader("Upload JD (TXT or PDF)", type=["pdf", "txt"])
+        if uploaded_file:
+            # Simple text extraction for demonstration
+            jd_content = uploaded_file.read().decode("utf-8")
+
+    with tab2:
+        pasted_text = st.text_area("Paste the JD here...", height=300)
+        if pasted_text:
+            jd_content = pasted_text
+
+    # --- Analysis Section ---
+    if jd_content:
+        if st.button("Analyze & Educate"):
+            prompt = f"""
+            Act as a Senior Tech Sourcing Mentor. Analyze this JD:
+            {jd_content}
+            
+            Provide:
+            1. Skill Breakdown: (Primary, Secondary, Preferable).
+            2. Tech Education: Explain 2-3 complex terms from the JD for a non-tech recruiter.
+            3. Search Strategy Logic: Explain keywords and operators needed for Naukri, LinkedIn, and GitHub.
+            
+            IMPORTANT: Do NOT provide actual Boolean strings or links. Explain the logic so the recruiter learns.
+            """
+            
+            with st.spinner("Decoding the tech stack..."):
+                try:
+                    response = openai.ChatCompletion.create(
+                        model="gpt-4o",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+                    st.success("Analysis Complete!")
+                    st.markdown("---")
+                    st.markdown(response.choices[0].message.content)
+                except Exception as e:
+                    st.error(f"Error: {e}")
+    else:
+        st.write("Waiting for a JD...")
 else:
-    st.info("Please enter your OpenAI API key in the sidebar to start.")
+    st.warning("Please enter your API key in the sidebar to begin.")
